@@ -1,7 +1,7 @@
 Leap Motion for Google Maps
 ==
 
-Use a Leap Motion to navigate through Google Maps by grabbing and pulling.
+Use a Leap Motion to navigate through Google Maps Street View
 
 **Updated for the V2 APIs, be sure to have the 2.0 Leap Motion software installed first.**
 
