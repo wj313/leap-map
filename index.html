@@ -54,6 +54,8 @@ function initialize() {
 
       if (thePanorama.getVisible()) {
           panorama = thePanorama;
+          var pov = panorama.getPov();
+          panorama.setPov({heading: pov.heading, pitch: pov.pitch, zoom: 0});
 
           google.maps.event.addListener(panorama, 'pov_changed', function () {
               if (setPano == true) {
@@ -90,10 +92,10 @@ function shouldChangeHeading() {
 
                 //Convert to degrees
                 roll = roll * 180 / Math.PI;
-                if (roll >= 15) {
+                if (roll >= 20) {
                     changePov("left");
                 }
-                else if (roll <= -15) {
+                else if (roll <= -20) {
                     changePov("right");
                 }
             }
@@ -117,13 +119,13 @@ function shouldMoveForward() {
                 pitch = pitch * 180 / Math.PI; 
                 roll = roll * 180 / Math.PI;
 
-                if (pitch <= -2 && roll < 15 && roll > -15) {
+                if (pitch <= -2 && roll < 20 && roll > -20) {
                     findNextPanorama();
                 }
             }
         }
-        //proceed = true;
-    }, 1000);
+
+    }, 400);
 }
 
 function changePov(direction) {
@@ -132,10 +134,10 @@ function changePov(direction) {
         var myPov = panorama.getPov();
         switch (direction) {
             case "left":
-                panorama.setPov({ heading: myPov.heading - 3, pitch: myPov.pitch });
+                panorama.setPov({ heading: myPov.heading - 6, pitch: myPov.pitch });
                 break;
             case "right":
-                panorama.setPov({ heading: myPov.heading + 3, pitch: myPov.pitch });
+                panorama.setPov({ heading: myPov.heading + 6, pitch: myPov.pitch });
                 break;
         }
     }
