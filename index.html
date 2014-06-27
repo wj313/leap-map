@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Simple Map</title>
+    <title>Leap Motion Google Maps</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
     <style>
@@ -23,6 +23,8 @@ var panorama = null;
 var currentLatLng = null;
 var proceed = true;
 var controller = null;
+var panoString = null;
+var setPano = false;
 
 function difference(a, b) {
     var d = Math.abs(a - b);
@@ -52,6 +54,18 @@ function initialize() {
 
       if (thePanorama.getVisible()) {
           panorama = thePanorama;
+
+          google.maps.event.addListener(panorama, 'pov_changed', function () {
+              if (setPano == true) {
+                  panorama.setPano(panoString);
+              }
+              setPano = false;
+          });
+
+          google.maps.event.addListener(panorama, 'links_changed', function () {
+              proceed = true;
+          });
+
       } else {
       }
 
@@ -60,10 +74,35 @@ function initialize() {
   controller = new Leap.Controller({ enableGestures: true });
   controller.connect();
 
-  listenToLeap();
+  shouldMoveForward();
+  shouldChangeHeading();
 }
 
-function listenToLeap() {
+function shouldChangeHeading() {
+    window.setInterval(function () {
+
+        if (proceed == true) {
+            proceed = false;
+            var frame = controller.frame();
+            if (frame.hands.length > 0) {
+                var hand = frame.hands[0];
+                var roll = hand.roll();
+
+                //Convert to degrees
+                roll = roll * 180 / Math.PI;
+                if (roll >= 15) {
+                    changePov("left");
+                }
+                else if (roll <= -15) {
+                    changePov("right");
+                }
+            }
+        }
+        proceed = true;
+    }, 100);
+}
+
+function shouldMoveForward() {
     window.setInterval(function () {
 
         if (proceed == true) {
@@ -72,30 +111,19 @@ function listenToLeap() {
             if (frame.hands.length > 0) {
                 var hand = frame.hands[0];
                 var pitch = hand.pitch();
-                var yaw = hand.yaw();
                 var roll = hand.roll();
 
                 //Convert to degrees
                 pitch = pitch * 180 / Math.PI; 
-                yaw = yaw * 180 / Math.PI; 
                 roll = roll * 180 / Math.PI;
 
                 if (pitch <= -2 && roll < 15 && roll > -15) {
                     findNextPanorama();
                 }
-                else {
-                    if (roll >= 15) {
-                        changePov("left");
-                    }
-                    else if (roll <= -15) {
-                        changePov("right");
-                    }
-                }
-
             }
-            proceed = true;
         }
-    }, 100);
+        //proceed = true;
+    }, 1000);
 }
 
 function changePov(direction) {
@@ -129,15 +157,31 @@ function findNextPanorama() {
             headingArrays.push(links[i].heading);
         }
 
+        //This is put in place because in some places street view is not available
+        //In those cases the next panorama is in the opposite direction so the user
+        //is turned around. To prevent the user from being disoriented, the panorama
+        //will not automatically switch if there is panorama within +60 or -60 degrees
+        var plus60 = myPano + 60;
+        var minus60 = myPano - 60;
+        headingArrays.push(plus60);
+        headingArrays.push(minus60);
+
         var closestHeading = closest(myPano, headingArrays);
 
-        //Set pano to the next closest pano
-        for (i = 0; i < links.length; i++) {
-            if (links[i].heading == closestHeading) {
-                panorama.setPano(links[i].pano);
-                panorama.setPov(myPanoVal);
-                i = links.length;
+        if (closestHeading != plus60 && closestHeading != minus60) {
+            for (i = 0; i < links.length; i++) {
+                if (links[i].heading == closestHeading) {
+                    var nextPano = links[i].heading;
+                    panoString = links[i].pano;
+                    panorama.setPov({ heading: nextPano, pitch: myPanoVal.pitch });
+                    //setting Pov triggers setPano
+                    setPano = true;
+                    i = links.length;
+                }
             }
+        }
+        else {
+            proceed = true;
         }
 
     }
